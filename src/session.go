@@ -89,10 +89,7 @@ func (session *Session) RunLoop() {
 				log.Println(err)
 				continue
 			}
-			context = &Context{
-				id:      id,
-				account: account,
-			}
+			context = NewContext(account)
 			CacheContext(context)
 		}
 
