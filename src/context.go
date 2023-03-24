@@ -1,6 +1,10 @@
 package main
 
-import "log"
+import (
+	"log"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+)
 
 type Context struct {
 	id      int64
@@ -25,35 +29,64 @@ func GetCachedContext(id int64, kind int) *Context {
 	return contexts[id]
 }
 
-func CacheContext(context *Context) {
-	contexts[context.id] = context
+func CacheContext(ctx *Context) {
+	contexts[ctx.id] = ctx
 }
 
-func NewContext(account *Account) *Context {
+func NewContext(acc *Account) *Context {
 	return &Context{
-		id:      account.Id,
-		account: account,
+		id:      acc.Id,
+		account: acc,
 		client: &HTTPClient{
 			baseURL: "https://api.openai.com/v1",
 		},
 	}
 }
 
-// Message Handler
+func (ctx *Context) BuildResponse(msg *tgbotapi.Message) []ChatCompletionMessage {
+	var messages []ChatCompletionMessage
+	messages = append(messages, ChatCompletionMessage{Role: "user", Content: msg.Text})
 
-func (ctx *Context) HandleMessage(message string) string {
-	if len(ctx.account.Key) == 0 {
-		return "API key missing"
+	if msg.ReplyToMessage != nil {
+		replyToMessageId := msg.ReplyToMessage.MessageID
+		for replyToMessageId > 0 {
+			replyToMessage, err := db.GetMessage(ctx.account, replyToMessageId)
+			if replyToMessage == nil || err != nil {
+				break
+			}
+			messages = append([]ChatCompletionMessage{{Role: replyToMessage.Role, Content: replyToMessage.Text}}, messages...)
+			replyToMessageId = replyToMessage.ParentId
+		}
 	}
 
-	if len(ctx.account.Model) == 0 {
-		return "Model missing"
-	}
+	return messages
+}
 
-	resp, err := ctx.client.SendChatMessage(message, ctx.account.Key, ctx.account.Model)
+func (ctx *Context) HandleMessage(msg *tgbotapi.Message) string {
+	messages := ctx.BuildResponse(msg)
+
+	resp, err := ctx.client.SendChatMessage(messages, ctx.account.Key, ctx.account.Model)
 	if err != nil {
 		return err.Error()
 	}
 
 	return resp.Choices[0].Message.Content
+}
+
+func (ctx *Context) SaveMessage(msg *tgbotapi.Message, role string) {
+	if msg == nil {
+		return
+	}
+
+	parentId := -1
+	if msg.ReplyToMessage != nil {
+		parentId = msg.ReplyToMessage.MessageID
+	}
+	db.SaveMessage(ctx.account, &Message{
+		Id:        msg.MessageID,
+		ParentId:  parentId,
+		Text:      msg.Text,
+		Role:      role,
+		Timestamp: msg.Time().Unix(),
+	})
 }

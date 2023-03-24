@@ -148,7 +148,7 @@ func request[T any](c *HTTPClient, ctx context.Context, path string, method stri
 	return result, err
 }
 
-func (c *HTTPClient) SendChatMessage(message string, key string, model string) (resp ChatCompletionResponse, err error) {
+func (c *HTTPClient) SendChatMessage(messages []ChatCompletionMessage, key string, model string) (resp ChatCompletionResponse, err error) {
 	return request(c,
 		context.Background(),
 		"chat/completions",
@@ -158,8 +158,6 @@ func (c *HTTPClient) SendChatMessage(message string, key string, model string) (
 		},
 		ChatCompletionRequest{
 			Model: model,
-			Messages: []ChatCompletionMessage{
-				{Role: "user", Content: message},
-			},
+			Messages: messages,
 		}, resp)
 }

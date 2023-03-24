@@ -88,10 +88,42 @@ func (fb *Firebase) GetAccount(id int64) (*Account, error) {
 	return account, err
 }
 
-func (fb *Firebase) SaveAccount(account *Account) error {
-	id := strconv.FormatInt(account.Id, 10)
+func (fb *Firebase) SaveAccount(acc *Account) error {
+	_, err := fb.firestore.Collection("accounts").Doc(strconv.FormatInt(acc.Id, 10)).Set(fb.ctx, acc)
+	return err
+}
 
-	_, err := fb.firestore.Collection("accounts").Doc(id).Set(fb.ctx, account)
+func (fb *Firebase) GetMessage(acc *Account, msgId int) (*Message, error) {
+	iter := fb.firestore.Collection("assets").Doc(strconv.FormatInt(acc.Id, 10)).Collection("messages").Where("id", "==", msgId).Documents(fb.ctx)
+
+	doc, err := iter.Next()
+	if err == iterator.Done {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var message *Message
+	err = doc.DataTo(&message)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return message, nil
+}
+
+func (fb *Firebase) SaveMessage(acc *Account, msg *Message) error {
+	ref := fb.firestore.Collection("assets").Doc(strconv.FormatInt(acc.Id, 10)).Collection("messages").Doc(strconv.Itoa(msg.Id))
+
+	err := fb.firestore.RunTransaction(fb.ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		err := tx.Set(ref, msg)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
 	return err
 }

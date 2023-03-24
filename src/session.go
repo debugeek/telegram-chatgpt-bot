@@ -17,7 +17,7 @@ func InitSession() {
 	sessionOnce.Do(func() {
 		bot, err := tgbotapi.NewBotAPI(token)
 		if err != nil {
-			log.Fatal("err")
+			log.Fatal(err)
 		}
 
 		u := tgbotapi.NewUpdate(0)
@@ -36,15 +36,15 @@ func InitSession() {
 	log.Println(`Session initialized`)
 }
 
-func (session *Session) Run() {
-	go session.RunLoop()
+func (s *Session) Run() {
+	go s.RunLoop()
 }
 
-func (session *Session) RunLoop() {
+func (s *Session) RunLoop() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 10
 
-	updates, err := session.bot.GetUpdatesChan(u)
+	updates, err := s.bot.GetUpdatesChan(u)
 	if err != nil {
 		log.Println(err)
 		return
@@ -64,8 +64,6 @@ func (session *Session) RunLoop() {
 			log.Println("unabled to handle update")
 			continue
 		}
-
-		log.Println(message.Text)
 
 		id := message.Chat.ID
 		kind := -1
@@ -93,92 +91,102 @@ func (session *Session) RunLoop() {
 			CacheContext(context)
 		}
 
-		session.handleMessage(context, message)
+		s.handleMessage(context, message)
 	}
 }
 
-func (session *Session) Send(context *Context, text string, disableWebPagePreview bool) error {
-	if context.account.Status == -1 {
-		return nil
+func (s *Session) Send(ctx *Context, text string, disableWebPagePreview bool) (*tgbotapi.Message, error) {
+	if ctx.account.Status == -1 {
+		return nil, nil
 	}
 
-	message := tgbotapi.MessageConfig{
+	cfg := tgbotapi.MessageConfig{
 		BaseChat: tgbotapi.BaseChat{
-			ChatID:           context.id,
+			ChatID:           ctx.id,
 			ReplyToMessageID: 0,
 		},
 		Text:                  text,
 		ParseMode:             "markdown",
 		DisableWebPagePreview: disableWebPagePreview,
 	}
-	_, err := session.bot.Send(message)
+	msg, err := s.bot.Send(cfg)
 	if err != nil {
-		session.handleError(context, err)
+		s.handleError(ctx, err)
 	}
-	return err
+	return &msg, err
 }
 
-func (session *Session) Reply(context *Context, replyToMessageID int, text string, disableWebPagePreview bool) error {
-	if context.account.Status == -1 {
-		return nil
+func (s *Session) Reply(ctx *Context, replyToMessageID int, text string, disableWebPagePreview bool) (*tgbotapi.Message, error) {
+	if ctx.account.Status == -1 {
+		return nil, nil
 	}
 
-	message := tgbotapi.MessageConfig{
+	cfg := tgbotapi.MessageConfig{
 		BaseChat: tgbotapi.BaseChat{
-			ChatID:           context.id,
+			ChatID:           ctx.id,
 			ReplyToMessageID: replyToMessageID,
 		},
 		Text:                  text,
 		ParseMode:             "markdown",
 		DisableWebPagePreview: disableWebPagePreview,
 	}
-	_, err := session.bot.Send(message)
+	msg, err := s.bot.Send(cfg)
 	if err != nil {
-		session.handleError(context, err)
+		s.handleError(ctx, err)
 	}
-	return err
+	return &msg, err
 }
 
-func (session *Session) handleMessage(context *Context, message *tgbotapi.Message) {
-	if context.account.Status == -1 {
-		context.account.Status = 1
-		db.SaveAccount(context.account)
+func (s *Session) handleMessage(ctx *Context, msg *tgbotapi.Message) {
+	if ctx.account.Status == -1 {
+		ctx.account.Status = 1
+		db.SaveAccount(ctx.account)
 	}
 
-	if message.IsCommand() {
-		switch strings.ToLower(message.Command()) {
+	replyToMessageID := msg.MessageID
+
+	if msg.IsCommand() {
+		switch strings.ToLower(msg.Command()) {
 		case "start":
 			{
-				session.Send(context, "Greetings.", false)
+				s.Reply(ctx, replyToMessageID, "Greetings.", false)
 				break
 			}
 		case "setkey":
 			{
-				args := message.CommandArguments()
-				context.account.Key = args
-				db.SaveAccount(context.account)
-				session.Reply(context, message.MessageID, "Key is updated.", false)
+				args := msg.CommandArguments()
+				ctx.account.Key = args
+				db.SaveAccount(ctx.account)
+				s.Reply(ctx, replyToMessageID, "Key is updated.", false)
 			}
 		case "setmodel":
 			{
-				args := message.CommandArguments()
-				context.account.Model = args
-				db.SaveAccount(context.account)
-				session.Reply(context, message.MessageID, "Model is updated.", false)
+				args := msg.CommandArguments()
+				ctx.account.Model = args
+				db.SaveAccount(ctx.account)
+				s.Reply(ctx, replyToMessageID, "Model is updated.", false)
 			}
 		default:
 			break
 		}
+	} else if len(ctx.account.Key) == 0 {
+		s.Reply(ctx, replyToMessageID, "API key is missing.", false)
+		return
+	} else if len(ctx.account.Model) == 0 {
+		s.Reply(ctx, replyToMessageID, "Model is missing.", false)
+		return
 	} else {
-		response := context.HandleMessage(message.Text)
-		session.Reply(context, message.MessageID, response, false)
+		ctx.SaveMessage(msg, "user")
+		response := ctx.HandleMessage(msg)
+		message, _ := s.Reply(ctx, replyToMessageID, response, false)
+		ctx.SaveMessage(message, "assistant")
 	}
 }
 
-func (session *Session) handleError(context *Context, err error) {
+func (s *Session) handleError(ctx *Context, err error) {
 	switch err.Error() {
 	case errChatNotFound, errNotMember:
-		context.account.Status = -1
-		db.SaveAccount(context.account)
+		ctx.account.Status = -1
+		db.SaveAccount(ctx.account)
 	}
 }

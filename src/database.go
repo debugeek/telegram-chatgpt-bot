@@ -10,11 +10,21 @@ type Account struct {
 	Model  string `firestore:"model"`
 }
 
+type Message struct {
+	Id        int    `firestore:"id"`
+	ParentId  int    `firestore:"parentId"`
+	Text      string `firestore:"text"`
+	Role      string `firestore:"role"`
+	Timestamp int64  `firestore:"timestamp"`
+}
+
 type DatabaseProtocol interface {
 	InitDatabase()
 	GetAccounts() ([]*Account, error)
 	GetAccount(id int64) (*Account, error)
 	SaveAccount(account *Account) error
+	GetMessage(account *Account, messageId int) (*Message, error)
+	SaveMessage(account *Account, message *Message) error
 }
 
 func InitDatabase() {
@@ -39,6 +49,12 @@ func (db *MemoryDatabase) GetAccounts() ([]*Account, error) {
 func (db *MemoryDatabase) GetAccount(id int64) (*Account, error) {
 	return nil, nil
 }
-func (db *MemoryDatabase) SaveAccount(account *Account) error {
+func (db *MemoryDatabase) SaveAccount(acc *Account) error {
+	return nil
+}
+func (db *MemoryDatabase) GetMessage(acc *Account, msgId int) (*Message, error) {
+	return nil, nil
+}
+func (db *MemoryDatabase) SaveMessage(acc *Account, msg *Message) error {
 	return nil
 }
