@@ -1,7 +1,5 @@
 package main
 
-import "log"
-
 type Account struct {
 	Id     int64  `firestore:"id"`
 	Kind   int    `firestore:"kind"`
@@ -32,29 +30,8 @@ func InitDatabase() {
 		if len(args.FirebaseConf) != 0 || len(args.FirebaseConfEnvKey) != 0 {
 			db = &Firebase{}
 		} else {
-			db = &MemoryDatabase{}
+			db = &MemCache{}
 		}
 		db.InitDatabase()
 	})
-}
-
-type MemoryDatabase struct{}
-
-func (db *MemoryDatabase) InitDatabase() {
-	log.Println(`Memory cache initialized`)
-}
-func (db *MemoryDatabase) GetAccounts() ([]*Account, error) {
-	return nil, nil
-}
-func (db *MemoryDatabase) GetAccount(id int64) (*Account, error) {
-	return nil, nil
-}
-func (db *MemoryDatabase) SaveAccount(acc *Account) error {
-	return nil
-}
-func (db *MemoryDatabase) GetMessage(acc *Account, msgId int) (*Message, error) {
-	return nil, nil
-}
-func (db *MemoryDatabase) SaveMessage(acc *Account, msg *Message) error {
-	return nil
 }
