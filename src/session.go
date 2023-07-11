@@ -14,24 +14,22 @@ type Session struct {
 }
 
 func InitSession() {
-	sessionOnce.Do(func() {
-		bot, err := tgbotapi.NewBotAPI(token)
-		if err != nil {
-			log.Fatal(err)
-		}
+	bot, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		u := tgbotapi.NewUpdate(0)
-		u.Timeout = 10
-		_, err = bot.GetUpdates(u)
-		if err != nil {
-			log.Fatal(err)
-		}
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 10
+	_, err = bot.GetUpdates(u)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		session = &Session{
-			token: token,
-			bot:   bot,
-		}
-	})
+	session = &Session{
+		token: token,
+		bot:   bot,
+	}
 	session.Run()
 	log.Println(`Session initialized`)
 }
@@ -152,12 +150,12 @@ func (s *Session) handleMessage(ctx *Context, msg *tgbotapi.Message) {
 				s.Reply(ctx, replyToMessageID, "Greetings.", false)
 				break
 			}
-		case "setkey":
+		case "setapikey":
 			{
 				args := msg.CommandArguments()
-				ctx.account.Key = args
+				ctx.account.APIKey = args
 				db.SaveAccount(ctx.account)
-				s.Reply(ctx, replyToMessageID, "Key is updated.", false)
+				s.Reply(ctx, replyToMessageID, "API Key is updated.", false)
 			}
 		case "setmodel":
 			{
@@ -169,17 +167,9 @@ func (s *Session) handleMessage(ctx *Context, msg *tgbotapi.Message) {
 		default:
 			break
 		}
-	} else if len(ctx.account.Key) == 0 {
-		s.Reply(ctx, replyToMessageID, "API key is missing.", false)
-		return
-	} else if len(ctx.account.Model) == 0 {
-		s.Reply(ctx, replyToMessageID, "Model is missing.", false)
-		return
 	} else {
-		ctx.SaveMessage(msg, "user")
 		response := ctx.HandleMessage(msg)
-		message, _ := s.Reply(ctx, replyToMessageID, response, false)
-		ctx.SaveMessage(message, "assistant")
+		s.Reply(ctx, replyToMessageID, response, false)
 	}
 }
 

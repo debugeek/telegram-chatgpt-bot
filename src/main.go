@@ -17,7 +17,7 @@ var args struct {
 }
 
 func launch() {
-	InitDatabase()
+	InitFirebase()
 	InitSession()
 	InitContext()
 }
