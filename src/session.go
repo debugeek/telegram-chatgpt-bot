@@ -104,7 +104,6 @@ func (s *Session) Send(ctx *Context, text string, disableWebPagePreview bool) (*
 			ReplyToMessageID: 0,
 		},
 		Text:                  text,
-		ParseMode:             "markdown",
 		DisableWebPagePreview: disableWebPagePreview,
 	}
 	msg, err := s.bot.Send(cfg)
@@ -125,7 +124,6 @@ func (s *Session) Reply(ctx *Context, replyToMessageID int, text string, disable
 			ReplyToMessageID: replyToMessageID,
 		},
 		Text:                  text,
-		ParseMode:             "markdown",
 		DisableWebPagePreview: disableWebPagePreview,
 	}
 	msg, err := s.bot.Send(cfg)
