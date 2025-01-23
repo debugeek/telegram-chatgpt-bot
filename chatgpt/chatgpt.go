@@ -33,7 +33,7 @@ type ChatCompetitionResponseErrorInfo struct {
 	Message string `json:"message"`
 }
 
-func SendText(text string, apikey string, model string) string {
+func Chat(text string, apikey string, model string) string {
 	message := ChatCompletionMessage{
 		Role:    "user",
 		Content: text,
