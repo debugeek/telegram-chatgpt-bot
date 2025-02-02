@@ -8,11 +8,22 @@ const (
 )
 
 const (
-	CmdSetAPIKey = "setapikey"
-	CmdSetModel  = "setmodel"
+	CmdSetServiceType    = "setservicetype"
+	CmdSetChatGPTAPIKey  = "setchatgptapikey"
+	CmdSetChatGPTModel   = "setchatgptmodel"
+	CmdSetOllamaEndpoint = "setollamaendpoint"
+	CmdSetOllamaModel    = "setollamamodel"
+)
+
+const (
+	ServiceTypeChatGPT = "chatgpt"
+	ServiceTypeOllama  = "ollama"
 )
 
 type UserData struct {
-	Model  string `firestore:"chatgpt-model"`
-	APIKey string `firestore:"chatgpt-api-key"`
+	ServiceType    string `firestore:"service-type"`
+	ChatGPTModel   string `firestore:"chatgpt-model"`
+	ChatGPTAPIKey  string `firestore:"chatgpt-api-key"`
+	OllamaEndpoint string `firestore:"ollama-endpoint"`
+	OllamaModel    string `firestore:"ollama-model"`
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"telegram-chatgpt-bot/chatgpt"
+	"telegram-chatgpt-bot/ollama"
 
 	"github.com/alexflint/go-arg"
 	tgbot "github.com/debugeek/telegram-bot"
@@ -57,8 +58,11 @@ func (app *App) launch() {
 		FirebaseDatabaseURL: firebaseDatabaseURL,
 	})
 	bot.RegisterTextHandler(app.processText)
-	bot.RegisterCustomCommandHandler(CmdSetAPIKey, app.processSetAPIKeyCommand)
-	bot.RegisterCustomCommandHandler(CmdSetModel, app.processSetModelCommand)
+	bot.RegisterCustomCommandHandler(CmdSetServiceType, app.processSetServiceTypeCommand)
+	bot.RegisterCustomCommandHandler(CmdSetChatGPTAPIKey, app.processSetChatGPTAPIKeyCommand)
+	bot.RegisterCustomCommandHandler(CmdSetChatGPTModel, app.processSetChatGPTModelCommand)
+	bot.RegisterCustomCommandHandler(CmdSetOllamaEndpoint, app.processSetOllamaEndpoint)
+	bot.RegisterCustomCommandHandler(CmdSetOllamaModel, app.processSetOllamaModelCommand)
 
 	app.bot = bot
 
@@ -70,28 +74,65 @@ func (app *App) launch() {
 }
 
 func (app *App) processText(session tgbot.Session[UserData], text string) {
-	if session.User.UserData.APIKey == "" {
-		session.SendText("API Key is missing.")
-		return
-	}
-	if session.User.UserData.Model == "" {
-		session.SendText("Model is missing.")
-		return
+	switch session.User.UserData.ServiceType {
+	case "", ServiceTypeChatGPT:
+		if session.User.UserData.ChatGPTAPIKey == "" {
+			session.SendText("ChatGPT API Key is missing.")
+			return
+		}
+		if session.User.UserData.ChatGPTModel == "" {
+			session.SendText("ChatGPT Model is missing.")
+			return
+		}
+
+		session.SendText(chatgpt.Chat(text, session.User.UserData.ChatGPTAPIKey, session.User.UserData.ChatGPTModel))
+
+	case ServiceTypeOllama:
+		if session.User.UserData.OllamaEndpoint == "" {
+			session.SendText("Ollama Endpoint is missing.")
+			return
+		}
+		if session.User.UserData.OllamaModel == "" {
+			session.SendText("Ollama Model is missing.")
+			return
+		}
+
+		session.SendText(ollama.Chat(session.User.UserData.OllamaEndpoint, session.User.UserData.OllamaModel, text, 0.5, 200))
 	}
 
-	session.SendText(chatgpt.Chat(text, session.User.UserData.APIKey, session.User.UserData.Model))
 }
 
-func (app *App) processSetAPIKeyCommand(session tgbot.Session[UserData], args string) bool {
-	session.User.UserData.APIKey = args
+func (app *App) processSetServiceTypeCommand(session tgbot.Session[UserData], args string) bool {
+	session.User.UserData.ServiceType = args
 	app.firebase.Firebase.UpdateUser(session.User)
-	session.SendText("API Key is updated.")
+	session.SendText("Service Type is updated.")
 	return true
 }
 
-func (app *App) processSetModelCommand(session tgbot.Session[UserData], args string) bool {
-	session.User.UserData.Model = args
+func (app *App) processSetChatGPTAPIKeyCommand(session tgbot.Session[UserData], args string) bool {
+	session.User.UserData.ChatGPTAPIKey = args
 	app.firebase.Firebase.UpdateUser(session.User)
-	session.SendText("Model is updated.")
+	session.SendText("ChatGPT API Key is updated.")
+	return true
+}
+
+func (app *App) processSetChatGPTModelCommand(session tgbot.Session[UserData], args string) bool {
+	session.User.UserData.ChatGPTModel = args
+	app.firebase.Firebase.UpdateUser(session.User)
+	session.SendText("ChatGPT Model is updated.")
+	return true
+}
+
+func (app *App) processSetOllamaEndpoint(session tgbot.Session[UserData], args string) bool {
+	session.User.UserData.OllamaEndpoint = args
+	app.firebase.Firebase.UpdateUser(session.User)
+	session.SendText("Ollama Endpoint is updated.")
+	return true
+}
+
+func (app *App) processSetOllamaModelCommand(session tgbot.Session[UserData], args string) bool {
+	session.User.UserData.OllamaModel = args
+	app.firebase.Firebase.UpdateUser(session.User)
+	session.SendText("Ollama Model is updated.")
 	return true
 }
