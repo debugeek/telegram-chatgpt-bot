@@ -61,7 +61,7 @@ func (app *App) launch() {
 	bot.RegisterCustomCommandHandler(CmdSetServiceType, app.processSetServiceTypeCommand)
 	bot.RegisterCustomCommandHandler(CmdSetChatGPTAPIKey, app.processSetChatGPTAPIKeyCommand)
 	bot.RegisterCustomCommandHandler(CmdSetChatGPTModel, app.processSetChatGPTModelCommand)
-	bot.RegisterCustomCommandHandler(CmdSetOllamaEndpoint, app.processSetOllamaEndpoint)
+	bot.RegisterCustomCommandHandler(CmdSetOllamaEndpoint, app.processSetOllamaEndpointCommand)
 	bot.RegisterCustomCommandHandler(CmdSetOllamaModel, app.processSetOllamaModelCommand)
 
 	app.bot = bot
@@ -123,7 +123,7 @@ func (app *App) processSetChatGPTModelCommand(session tgbot.Session[UserData], a
 	return true
 }
 
-func (app *App) processSetOllamaEndpoint(session tgbot.Session[UserData], args string) bool {
+func (app *App) processSetOllamaEndpointCommand(session tgbot.Session[UserData], args string) bool {
 	session.User.UserData.OllamaEndpoint = args
 	app.firebase.Firebase.UpdateUser(session.User)
 	session.SendText("Ollama Endpoint is updated.")
