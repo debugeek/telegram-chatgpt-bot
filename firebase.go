@@ -5,5 +5,5 @@ import (
 )
 
 type Firebase struct {
-	tgbot.Firebase[UserData]
+	tgbot.Firebase[BotData, UserData]
 }

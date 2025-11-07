@@ -20,6 +20,9 @@ const (
 	ServiceTypeOllama  = "ollama"
 )
 
+type BotData struct {
+}
+
 type UserData struct {
 	ServiceType    string `firestore:"service-type"`
 	ChatGPTModel   string `firestore:"chatgpt-model"`

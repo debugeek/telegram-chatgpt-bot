@@ -3,8 +3,8 @@ module telegram-chatgpt-bot
 go 1.22.2
 
 require (
-	github.com/alexflint/go-arg v1.4.3
-	github.com/debugeek/telegram-bot v0.0.0-20250122131217-b865c9434a31
+	github.com/alexflint/go-arg v1.6.0
+	github.com/debugeek/telegram-bot v0.0.0-20250720032217-4abe3cacba9a
 )
 
 require (
@@ -18,7 +18,7 @@ require (
 	cloud.google.com/go/storage v1.43.0 // indirect
 	firebase.google.com/go/v4 v4.15.1 // indirect
 	github.com/MicahParks/keyfunc v1.9.0 // indirect
-	github.com/alexflint/go-scalar v1.1.0 // indirect
+	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
