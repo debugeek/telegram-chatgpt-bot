@@ -4,28 +4,35 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
+	"time"
 )
 
-type RequestBody struct {
-	Model     string  `json:"model"`
-	Prompt    string  `json:"prompt"`
-	Temp      float32 `json:"temperature"`
-	MaxTokens int     `json:"max_tokens"`
-	Stream    bool    `json:"stream"`
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
-type ResponseBody struct {
-	Response string `json:"response"`
+type ChatRequestBody struct {
+	Model    string        `json:"model"`
+	Messages []ChatMessage `json:"messages"`
+	Stream   bool          `json:"stream"`
 }
 
-func Chat(endpoint string, model string, prompt string, temp float32, maxTokens int) string {
-	reqBody, err := json.Marshal(RequestBody{
-		Model:     model,
-		Prompt:    prompt,
-		Temp:      temp,
-		MaxTokens: maxTokens,
-		Stream:    false,
+type ChatResponseBody struct {
+	Message ChatMessage `json:"message"`
+}
+
+func Chat(endpoint string, apiKey string, model string, prompt string, temp float32, maxTokens int) string {
+	reqBody, err := json.Marshal(ChatRequestBody{
+		Model: model,
+		Messages: []ChatMessage{{
+			Role:    "user",
+			Content: prompt,
+		}},
+		Stream: false,
 	})
 	if err != nil {
 		return err.Error()
@@ -37,20 +44,28 @@ func Chat(endpoint string, model string, prompt string, temp float32, maxTokens 
 	}
 
 	req.Header.Add("Content-Type", "application/json")
+	if apiKey != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+	}
 
-	http := &http.Client{}
-	resp, err := http.Do(req)
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err.Error()
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		var respBody ResponseBody
+		var respBody ChatResponseBody
 		if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
 			return err.Error()
 		}
-		return respBody.Response
-	} else {
-		return fmt.Sprintf("%v", resp)
+		return respBody.Message.Content
 	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Sprintf("%s", resp.Status)
+	}
+	return strings.TrimSpace(fmt.Sprintf("%s: %s", resp.Status, body))
 }

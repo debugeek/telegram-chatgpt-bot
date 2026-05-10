@@ -9,9 +9,11 @@ const (
 
 const (
 	CmdSetServiceType    = "setservicetype"
+	CmdSetup             = "setup"
 	CmdSetChatGPTAPIKey  = "setchatgptapikey"
 	CmdSetChatGPTModel   = "setchatgptmodel"
 	CmdSetOllamaEndpoint = "setollamaendpoint"
+	CmdSetOllamaAPIKey   = "setollamaapikey"
 	CmdSetOllamaModel    = "setollamamodel"
 )
 
@@ -28,5 +30,6 @@ type UserData struct {
 	ChatGPTModel   string `firestore:"chatgpt-model"`
 	ChatGPTAPIKey  string `firestore:"chatgpt-api-key"`
 	OllamaEndpoint string `firestore:"ollama-endpoint"`
+	OllamaAPIKey   string `firestore:"ollama-api-key"`
 	OllamaModel    string `firestore:"ollama-model"`
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type ChatCompletionMessage struct {
@@ -55,11 +56,12 @@ func Chat(text string, apikey string, model string) string {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apikey))
 	req.Header.Add("Content-Type", "application/json")
 
-	http := &http.Client{}
-	resp, err := http.Do(req)
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err.Error()
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		response := ChatCompletionResponse{}

@@ -9,7 +9,6 @@ import (
 
 	"github.com/alexflint/go-arg"
 	tgbot "github.com/debugeek/telegram-bot"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 var args struct {
@@ -53,16 +52,21 @@ func (app *App) launch() {
 		panic(errors.New(errFirebaseDatabaseNotFound))
 	}
 
-	bot := tgbot.NewBot[BotData, UserData](tgbot.Config{
+	bot, err := tgbot.NewBot[BotData, UserData](tgbot.Config{
 		TelegramBotToken:    telegramBotToken,
 		FirebaseCredential:  firebaseCredential,
 		FirebaseDatabaseURL: firebaseDatabaseURL,
 	}, app)
+	if err != nil {
+		panic(err)
+	}
 	bot.RegisterTextHandler(app.processText)
 	bot.RegisterCommandHandler(CmdSetServiceType, app.processSetServiceTypeCommand)
+	bot.RegisterCommandHandler(CmdSetup, app.processSetupCommand)
 	bot.RegisterCommandHandler(CmdSetChatGPTAPIKey, app.processSetChatGPTAPIKeyCommand)
 	bot.RegisterCommandHandler(CmdSetChatGPTModel, app.processSetChatGPTModelCommand)
 	bot.RegisterCommandHandler(CmdSetOllamaEndpoint, app.processSetOllamaEndpointCommand)
+	bot.RegisterCommandHandler(CmdSetOllamaAPIKey, app.processSetOllamaAPIKeyCommand)
 	bot.RegisterCommandHandler(CmdSetOllamaModel, app.processSetOllamaModelCommand)
 
 	app.bot = bot
@@ -86,7 +90,7 @@ func (app *App) DidLoadPreference() {
 
 }
 
-func (app *App) processText(session *tgbot.Session[BotData, UserData], text string, message *tgbotapi.Message) {
+func (app *App) processText(session *tgbot.Session[BotData, UserData], text string, message *tgbot.Message) {
 	switch session.User.UserData.ServiceType {
 	case "", ServiceTypeChatGPT:
 		if session.User.UserData.ChatGPTAPIKey == "" {
@@ -110,15 +114,16 @@ func (app *App) processText(session *tgbot.Session[BotData, UserData], text stri
 			return
 		}
 
-		session.SendTextWithConfig(ollama.Chat(session.User.UserData.OllamaEndpoint, session.User.UserData.OllamaModel, text, 0.5, 200), tgbot.MessageConfig{
+		session.SendTextWithConfig(ollama.Chat(session.User.UserData.OllamaEndpoint, session.User.UserData.OllamaAPIKey, session.User.UserData.OllamaModel, text, 0.5, 200), tgbot.MessageConfig{
 			ReplyToMessageID: message.MessageID,
-			ParseMode:        tgbot.ParseModeMarkdown,
 		})
+	default:
+		session.SendText("Unsupported Service Type.")
 	}
 
 }
 
-func (app *App) processSetServiceTypeCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbotapi.Message) tgbot.CmdResult {
+func (app *App) processSetServiceTypeCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbot.Message) tgbot.CmdResult {
 	session.User.UserData.ServiceType = args
 	app.firebase.Firebase.UpdateUser(session.User)
 	session.SendTextWithConfig("Service Type is updated.", tgbot.MessageConfig{
@@ -127,7 +132,7 @@ func (app *App) processSetServiceTypeCommand(session *tgbot.Session[BotData, Use
 	return tgbot.CmdResultProcessed
 }
 
-func (app *App) processSetChatGPTAPIKeyCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbotapi.Message) tgbot.CmdResult {
+func (app *App) processSetChatGPTAPIKeyCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbot.Message) tgbot.CmdResult {
 	session.User.UserData.ChatGPTAPIKey = args
 	app.firebase.Firebase.UpdateUser(session.User)
 	session.SendTextWithConfig("ChatGPT API Key is updated.", tgbot.MessageConfig{
@@ -136,7 +141,7 @@ func (app *App) processSetChatGPTAPIKeyCommand(session *tgbot.Session[BotData, U
 	return tgbot.CmdResultProcessed
 }
 
-func (app *App) processSetChatGPTModelCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbotapi.Message) tgbot.CmdResult {
+func (app *App) processSetChatGPTModelCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbot.Message) tgbot.CmdResult {
 	session.User.UserData.ChatGPTModel = args
 	app.firebase.Firebase.UpdateUser(session.User)
 	session.SendTextWithConfig("ChatGPT Model is updated.", tgbot.MessageConfig{
@@ -145,7 +150,7 @@ func (app *App) processSetChatGPTModelCommand(session *tgbot.Session[BotData, Us
 	return tgbot.CmdResultProcessed
 }
 
-func (app *App) processSetOllamaEndpointCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbotapi.Message) tgbot.CmdResult {
+func (app *App) processSetOllamaEndpointCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbot.Message) tgbot.CmdResult {
 	session.User.UserData.OllamaEndpoint = args
 	app.firebase.Firebase.UpdateUser(session.User)
 	session.SendTextWithConfig("Ollama Endpoint is updated.", tgbot.MessageConfig{
@@ -154,7 +159,16 @@ func (app *App) processSetOllamaEndpointCommand(session *tgbot.Session[BotData, 
 	return tgbot.CmdResultProcessed
 }
 
-func (app *App) processSetOllamaModelCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbotapi.Message) tgbot.CmdResult {
+func (app *App) processSetOllamaAPIKeyCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbot.Message) tgbot.CmdResult {
+	session.User.UserData.OllamaAPIKey = args
+	app.firebase.Firebase.UpdateUser(session.User)
+	session.SendTextWithConfig("Ollama API Key is updated.", tgbot.MessageConfig{
+		ReplyToMessageID: message.MessageID,
+	})
+	return tgbot.CmdResultProcessed
+}
+
+func (app *App) processSetOllamaModelCommand(session *tgbot.Session[BotData, UserData], args string, message *tgbot.Message) tgbot.CmdResult {
 	session.User.UserData.OllamaModel = args
 	app.firebase.Firebase.UpdateUser(session.User)
 	session.SendTextWithConfig("Ollama Model is updated.", tgbot.MessageConfig{
